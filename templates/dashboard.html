@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <h1>AI Proctor</h1>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/exam">Start Exam</a></li>
+        </ul>
+    </nav>
+
+    <div class="dashboard">
+
+        <h1>Admin Dashboard</h1>
+
+        <div class="dashboard-cards">
+
+            <div class="dash-card">
+                <h2>12</h2>
+                <p>Total Students</p>
+            </div>
+
+            <div class="dash-card">
+                <h2>4</h2>
+                <p>Warnings Detected</p>
+            </div>
+
+            <div class="dash-card">
+                <h2>2</h2>
+                <p>Multiple Face Cases</p>
+            </div>
+
+        </div>
+
+
+        <div class="table-box">
+
+            <table>
+                <tr>
+                    <th>Time</th>
+                    <th>Event</th>
+                </tr>
+
+                <tr>
+                    <td>10:02 AM</td>
+                    <td>Looking Away Detected</td>
+                </tr>
+
+                <tr>
+                    <td>10:06 AM</td>
+                    <td>Multiple Faces Detected</td>
+                </tr>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</body>
+
+</html>

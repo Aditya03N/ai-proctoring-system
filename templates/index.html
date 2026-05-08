@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Proctoring System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <h1>AI Proctor</h1>
+
+        <ul>
+            <li><a href="#">Home</a></li>
+            <li><a href="#">Features</a></li>
+            <li><a href="#">About</a></li>
+            <li><a href="/exam">Start Exam</a></li>
+        </ul>
+    </nav>
+
+
+    <section class="hero">
+        <div class="hero-left">
+            <h2>AI Powered Online Exam Monitoring</h2>
+
+            <p>
+                Smart webcam-based proctoring system that detects suspicious activities,
+                multiple faces, looking away, and cheating attempts during online exams.
+            </p>
+
+            <button onclick="window.location.href='/exam'">
+                Start Exam
+            </button>
+        </div>
+
+        <div class="hero-right">
+            <img src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200&auto=format&fit=crop"
+                alt="AI Monitoring">
+        </div>
+    </section>
+
+
+    <section class="features">
+
+        <div class="card" onclick="window.location.href='/exam'" style="cursor: pointer;">
+            <h3>Face Detection</h3>
+            <p>Detects multiple faces during the exam.</p>
+        </div>
+
+        <div class="card" onclick="window.location.href='/exam'" style="cursor: pointer;">
+            <h3>Head Pose Tracking</h3>
+            <p>Monitors whether candidate looks away frequently.</p>
+        </div>
+
+        <div class="card" onclick="window.location.href='/exam'" style="cursor: pointer;">
+            <h3>Real-Time Alerts</h3>
+            <p>Logs suspicious activity instantly.</p>
+        </div>
+
+    </section>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+
+</html>

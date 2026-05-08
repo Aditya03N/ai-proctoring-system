@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Exam - AI Proctoring</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+
+<body class="exam-page">
+
+    <nav class="navbar">
+        <h1>AI Proctor - Live Exam</h1>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/dashboard">Dashboard</a></li>
+        </ul>
+        <div class="timer-box">
+            <span>Time Remaining: </span>
+            <b id="timer">60:00</b>
+        </div>
+    </nav>
+
+    <main class="exam-container">
+        <!-- LEFT: Questions Placeholder -->
+        <section class="questions-panel">
+            <div class="card">
+                <h2>Question 1</h2>
+                <p>Explain the importance of Computer Vision in modern AI systems.</p>
+                <textarea placeholder="Type your answer here..."></textarea>
+            </div>
+            <div class="nav-buttons">
+                <button class="btn-secondary">Previous</button>
+                <button class="btn-primary">Next Question</button>
+            </div>
+        </section>
+
+        <!-- RIGHT: Proctoring Panel -->
+        <aside class="proctor-panel">
+            <div class="webcam-box">
+                <video id="video" autoplay playsinline></video>
+                <div class="status-overlay">LIVE MONITORING</div>
+            </div>
+
+            <div class="stats-box">
+                <div class="stat-item">
+                    <span>Warnings:</span>
+                    <b id="warningCount">0</b>
+                </div>
+                <div class="stat-item">
+                    <span>Status:</span>
+                    <b class="status-ok">Secure</b>
+                </div>
+            </div>
+
+            <div class="logs-container">
+                <h3>Activity Logs</h3>
+                <div id="logs" class="logs-list">
+                    <!-- Logs will appear here -->
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- MediaPipe -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+
+</html>
