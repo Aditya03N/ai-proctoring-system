@@ -1,0 +1,20 @@
+# Virtual Environment
+venv/
+venv312/
+.venv/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# AI Models (Optional: ignore if they are too large)
+# face_landmarker.task
+
+# IDE Settings
+.vscode/
+
+# OS specific files
+.DS_Store
+Thumbs.db
