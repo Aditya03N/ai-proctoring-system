@@ -10,31 +10,73 @@
 
 <body class="exam-page">
 
-    <div class="exam-container">
+    <div class="header">
+        <div class="logo">AI PROCTOR PRO</div>
+        <div class="user-info">Candidate ID: #2024-ADITYA</div>
+    </div>
 
-        <div class="video-section">
-            <h2>Live Monitoring</h2>
-            <div class="webcam-box">
-                <video id="video" autoplay playsinline></video>
-                <div class="status-overlay">LIVE MONITORING</div>
+    <div class="exam-layout">
+        
+        <!-- Main Question Section -->
+        <div class="question-container">
+            <div class="question-card">
+                <span class="q-num">Question 1</span>
+                <h3>Which of the following is NOT an AI technique used in proctoring?</h3>
+                <div class="options">
+                    <label class="option"><input type="radio" name="q1" value="a"> <span>Gaze Tracking</span></label>
+                    <label class="option"><input type="radio" name="q1" value="b"> <span>Face Identification</span></label>
+                    <label class="option"><input type="radio" name="q1" value="c"> <span>Quantum Entanglement</span></label>
+                    <label class="option"><input type="radio" name="q1" value="d"> <span>Object Detection</span></label>
+                </div>
             </div>
 
-            <div class="status-box">
-                <p>Status: <span id="statusText" class="green">Monitoring Active</span></p>
-                <p>Warnings: <span id="warningCount">0</span></p>
+            <div class="question-card">
+                <span class="q-num">Question 2</span>
+                <h3>What is the primary goal of the MediaPipe Face Mesh used in this project?</h3>
+                <div class="options">
+                    <label class="option"><input type="radio" name="q2" value="a"> <span>To apply filters like Instagram</span></label>
+                    <label class="option"><input type="radio" name="q2" value="b"> <span>To map 468 facial landmarks for behavioral analysis</span></label>
+                    <label class="option"><input type="radio" name="q2" value="c"> <span>To unlock the student's phone</span></label>
+                    <label class="option"><input type="radio" name="q2" value="d"> <span>To record high-definition video</span></label>
+                </div>
+            </div>
+
+            <div class="question-card">
+                <span class="q-num">Question 3</span>
+                <h3>Why is Socket.IO used instead of normal HTTP requests in this system?</h3>
+                <div class="options">
+                    <label class="option"><input type="radio" name="q3" value="a"> <span>To make the website look pretty</span></label>
+                    <label class="option"><input type="radio" name="q3" value="b"> <span>To allow real-time, low-latency frame transmission</span></label>
+                    <label class="option"><input type="radio" name="q3" value="c"> <span>To save images to the database</span></label>
+                    <label class="option"><input type="radio" name="q3" value="d"> <span>To block the student's keyboard</span></label>
+                </div>
+            </div>
+
+            <div class="submit-footer">
+                <button id="submitBtn" class="btn-submit">Final Submit Exam</button>
             </div>
         </div>
 
-        <div class="side-panel">
-            <div class="timer-box">
-                <h3>Exam Timer</h3>
-                <h1 id="timer">60:00</h1>
+        <!-- Monitoring Section (Fixed on right) -->
+        <div class="monitoring-panel">
+            <div class="timer-card">
+                <p>Time Remaining</p>
+                <h1 id="timer">59:59</h1>
             </div>
 
-            <div class="alert-box">
+            <div class="monitor-card">
+                <h3>Live Monitoring</h3>
+                <div class="webcam-wrapper">
+                    <video id="video" autoplay playsinline></video>
+                    <div class="status-indicator"></div>
+                </div>
+                <p class="status-text">Status: <span id="statusTxt" class="green">SECURE</span></p>
+            </div>
+
+            <div class="alerts-card">
                 <h3>AI Alerts</h3>
-                <div id="logs" class="logs-list">
-                    <p class="log-info">Connecting to AI Server...</p>
+                <div id="ai-alerts" class="alerts-stream">
+                    <p class="alert-info">System initialized...</p>
                 </div>
             </div>
         </div>
@@ -43,7 +85,6 @@
 
     <!-- Socket.IO for Server-Side AI -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
-    <!-- Main Logic -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 
