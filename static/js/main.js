@@ -56,6 +56,7 @@ function addAlert(message, type = 'warning') {
 
 // 3. Listen for AI results
 socket.on('proctor_update', (data) => {
+    console.log("AI Server Update:", data);
     if (data.status === 'warning') {
         const now = Date.now();
         if (now - lastAlertTime > ALERT_COOLDOWN) {
