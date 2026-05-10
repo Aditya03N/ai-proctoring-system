@@ -2,15 +2,29 @@
 'use strict';
 
 const videoElement = document.getElementById('video');
+const videoWrapper = document.getElementById('videoWrapper');
 const alertsStream = document.getElementById('ai-alerts');
-const statusTxt = document.getElementById('statusTxt');
+const overallStatus = document.getElementById('overallStatus');
 const timerEl = document.getElementById('timer');
+const warningCounterEl = document.getElementById('warningCounter');
+
+// Metrics elements
+const metricFace = document.getElementById('metricFace');
+const metricEye = document.getElementById('metricEye');
+const metricMouth = document.getElementById('metricMouth');
+
+// Set Initial Time for Log
+const initTimeEl = document.getElementById('initTime');
+if(initTimeEl) {
+    initTimeEl.innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
 
 // Socket.IO Initialization
 const socket = io();
 
 let lastAlertTime = 0;
 const ALERT_COOLDOWN = 3000; 
+let warningsCount = 0;
 
 // 1. Initialize Exam Timer
 let timeRemaining = 60 * 60; 
@@ -21,42 +35,70 @@ if (timerEl) {
         seconds = seconds < 10 ? "0" + seconds : seconds;
         timerEl.innerText = `${minutes}:${seconds}`;
         timeRemaining--;
+        if(timeRemaining < 0) timeRemaining = 0;
     }, 1000);
 }
 
 // 2. Helper to Add Alerts to Stream
 function addAlert(message, type = 'warning') {
     if (!alertsStream) return;
-    
-    // Remove the "System initialized" placeholder
-    const info = alertsStream.querySelector('.alert-info');
-    if (info) info.remove();
+
+    warningsCount++;
+    if(warningCounterEl) warningCounterEl.innerText = warningsCount;
 
     const div = document.createElement("div");
     div.classList.add("alert-item");
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    div.innerText = `[${time}] ${message}`;
+    
+    div.innerHTML = `<span><i class="fas fa-exclamation-triangle"></i> ${message}</span><span class="time">${time}</span>`;
     
     alertsStream.prepend(div);
     
     // Visual Feedback
     if (type === 'warning') {
-        const wrapper = document.querySelector('.webcam-wrapper');
-        wrapper.style.borderColor = '#ef4444';
-        statusTxt.innerText = "WARNING";
-        statusTxt.className = "red";
+        videoWrapper.className = 'video-wrapper warning';
+        overallStatus.innerHTML = '<i class="fas fa-circle"></i> WARNING';
+        overallStatus.style.color = 'var(--warning)';
         
+        updateMetrics(message);
+
         setTimeout(() => {
-            wrapper.style.borderColor = 'transparent';
-            statusTxt.innerText = "SECURE";
-            statusTxt.className = "green";
-        }, 2000);
+            videoWrapper.className = 'video-wrapper';
+            overallStatus.innerHTML = '<i class="fas fa-circle"></i> SECURE';
+            overallStatus.style.color = 'var(--success)';
+            resetMetrics();
+        }, 2500);
     }
+}
+
+function updateMetrics(msg) {
+    const msgLower = msg.toLowerCase();
+    if(msgLower.includes("visible") || msgLower.includes("face")) {
+        metricFace.classList.add('alert');
+        metricFace.querySelector('strong').innerText = 'Lost';
+    } else if (msgLower.includes("looking")) {
+        metricEye.classList.add('alert');
+        metricEye.querySelector('strong').innerText = 'Deviated';
+    } else if (msgLower.includes("mouth")) {
+        metricMouth.classList.add('alert');
+        metricMouth.querySelector('strong').innerText = 'Moving';
+    }
+}
+
+function resetMetrics() {
+    metricFace.classList.remove('alert');
+    metricFace.querySelector('strong').innerText = 'Locked';
+    
+    metricEye.classList.remove('alert');
+    metricEye.querySelector('strong').innerText = 'Centered';
+    
+    metricMouth.classList.remove('alert');
+    metricMouth.querySelector('strong').innerText = 'Closed';
 }
 
 // 3. Listen for AI results
 socket.on('proctor_update', (data) => {
-    console.log("AI Server Update:", data);
+    // console.log("AI Server Update:", data);
     if (data.status === 'warning') {
         const now = Date.now();
         if (now - lastAlertTime > ALERT_COOLDOWN) {
@@ -68,7 +110,7 @@ socket.on('proctor_update', (data) => {
 
 // 4. Capture & Send Frames
 const canvas = document.createElement('canvas');
-const context = canvas.getContext('2d');
+const context = canvas.getContext('2d', { willReadFrequently: true });
 
 function sendFrame() {
     if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
@@ -89,6 +131,9 @@ if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         })
         .catch((err) => {
             addAlert("Camera Error: " + err.message, 'error');
+            videoWrapper.className = 'video-wrapper critical';
+            overallStatus.innerHTML = '<i class="fas fa-times-circle"></i> CAM ERROR';
+            overallStatus.style.color = 'var(--danger)';
         });
 }
 
@@ -98,6 +143,6 @@ socket.on('connect', () => {
 
 // Submit Button Action
 document.getElementById('submitBtn')?.addEventListener('click', () => {
-    alert("Exam Submitted Successfully! Please wait for results.");
+    alert("Examination Submitted Securely. Disconnecting link.");
     window.location.href = "/dashboard";
 });

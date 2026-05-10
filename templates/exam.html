@@ -1,91 +1,119 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exam Portal - AI Proctoring</title>
+    <title>AI ProctorX | Examination Gateway</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
+<body>
 
-<body class="exam-page">
-
-    <div class="header">
-        <div class="logo">AI PROCTOR PRO</div>
-        <div class="user-info">Candidate ID: #2024-ADITYA</div>
-    </div>
+    <nav class="navbar glass-panel">
+        <div class="nav-brand text-gradient">
+            <i class="fas fa-shield-virus"></i> AI ProctorX Gateway
+        </div>
+        <div class="user-badge" style="border-color: var(--danger); color: var(--danger); background: rgba(239, 68, 68, 0.1);">
+            <i class="fas fa-record-vinyl" style="animation: blink 2s infinite;"></i> LIVE MONITORING ACTIVE
+        </div>
+    </nav>
 
     <div class="exam-layout">
         
-        <!-- Main Question Section -->
-        <div class="question-container">
-            <div class="question-card">
-                <span class="q-num">Question 1</span>
-                <h3>Which of the following is NOT an AI technique used in proctoring?</h3>
+        <!-- Left Panel: Questions -->
+        <div class="question-panel glass-panel">
+            <div style="border-bottom: 1px solid var(--glass-border); padding-bottom: 20px; margin-bottom: 10px;">
+                <h2 class="orbitron" style="font-size: 1.5rem;">Advanced AI Assessment</h2>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Please do not look away from the screen.</p>
+            </div>
+
+            <div class="question-card glass-panel" style="background: rgba(0,0,0,0.2);">
+                <span class="badge" style="background: var(--primary); color: #000; margin-bottom: 15px;">Question 1</span>
+                <h3>Which of the following neural network architectures is most suitable for sequential data?</h3>
                 <div class="options">
-                    <label class="option"><input type="radio" name="q1" value="a"> <span>Gaze Tracking</span></label>
-                    <label class="option"><input type="radio" name="q1" value="b"> <span>Face Identification</span></label>
-                    <label class="option"><input type="radio" name="q1" value="c"> <span>Quantum Entanglement</span></label>
-                    <label class="option"><input type="radio" name="q1" value="d"> <span>Object Detection</span></label>
+                    <label class="option"><input type="radio" name="q1" value="a"> <span>Convolutional Neural Networks (CNNs)</span></label>
+                    <label class="option"><input type="radio" name="q1" value="b"> <span>Recurrent Neural Networks (RNNs)</span></label>
+                    <label class="option"><input type="radio" name="q1" value="c"> <span>Generative Adversarial Networks (GANs)</span></label>
+                    <label class="option"><input type="radio" name="q1" value="d"> <span>Support Vector Machines (SVMs)</span></label>
                 </div>
             </div>
 
-            <div class="question-card">
-                <span class="q-num">Question 2</span>
-                <h3>What is the primary goal of the MediaPipe Face Mesh used in this project?</h3>
+            <div class="question-card glass-panel" style="background: rgba(0,0,0,0.2);">
+                <span class="badge" style="background: var(--primary); color: #000; margin-bottom: 15px;">Question 2</span>
+                <h3>In MediaPipe Face Mesh, how many 3D landmarks are detected on a single face?</h3>
                 <div class="options">
-                    <label class="option"><input type="radio" name="q2" value="a"> <span>To apply filters like Instagram</span></label>
-                    <label class="option"><input type="radio" name="q2" value="b"> <span>To map 468 facial landmarks for behavioral analysis</span></label>
-                    <label class="option"><input type="radio" name="q2" value="c"> <span>To unlock the student's phone</span></label>
-                    <label class="option"><input type="radio" name="q2" value="d"> <span>To record high-definition video</span></label>
+                    <label class="option"><input type="radio" name="q2" value="a"> <span>68</span></label>
+                    <label class="option"><input type="radio" name="q2" value="b"> <span>468</span></label>
+                    <label class="option"><input type="radio" name="q2" value="c"> <span>1024</span></label>
+                    <label class="option"><input type="radio" name="q2" value="d"> <span>256</span></label>
                 </div>
             </div>
 
-            <div class="question-card">
-                <span class="q-num">Question 3</span>
-                <h3>Why is Socket.IO used instead of normal HTTP requests in this system?</h3>
-                <div class="options">
-                    <label class="option"><input type="radio" name="q3" value="a"> <span>To make the website look pretty</span></label>
-                    <label class="option"><input type="radio" name="q3" value="b"> <span>To allow real-time, low-latency frame transmission</span></label>
-                    <label class="option"><input type="radio" name="q3" value="c"> <span>To save images to the database</span></label>
-                    <label class="option"><input type="radio" name="q3" value="d"> <span>To block the student's keyboard</span></label>
-                </div>
-            </div>
-
-            <div class="submit-footer">
-                <button id="submitBtn" class="btn-submit">Final Submit Exam</button>
+            <div style="margin-top: 20px; text-align: right;">
+                <button id="submitBtn" class="btn-glow btn-danger"><i class="fas fa-check-double"></i> Submit Examination</button>
             </div>
         </div>
 
-        <!-- Monitoring Section (Fixed on right) -->
+        <!-- Right Panel: Monitoring -->
         <div class="monitoring-panel">
-            <div class="timer-card">
-                <p>Time Remaining</p>
-                <h1 id="timer">59:59</h1>
+            
+            <div class="timer-card glass-panel">
+                <p style="text-transform: uppercase; letter-spacing: 2px; font-size: 0.8rem; color: var(--text-muted);">Time Remaining</p>
+                <div class="timer-display" id="timer">60:00</div>
             </div>
 
-            <div class="monitor-card">
-                <h3>Live Monitoring</h3>
-                <div class="webcam-wrapper">
+            <div class="webcam-card glass-panel">
+                <div class="webcam-header">
+                    <span style="font-family: var(--font-heading); font-size: 0.9rem;"><i class="fas fa-eye"></i> Proctor Feed</span>
+                    <span class="recording-indicator" id="overallStatus"><i class="fas fa-circle"></i> SECURE</span>
+                </div>
+                
+                <div class="video-wrapper" id="videoWrapper">
                     <video id="video" autoplay playsinline></video>
-                    <div class="status-indicator"></div>
                 </div>
-                <p class="status-text">Status: <span id="statusTxt" class="green">SECURE</span></p>
+
+                <div class="metrics-grid">
+                    <div class="metric-box" id="metricFace">
+                        <span>Face Track</span>
+                        <strong>Locked</strong>
+                    </div>
+                    <div class="metric-box" id="metricEye">
+                        <span>Eye Gaze</span>
+                        <strong>Centered</strong>
+                    </div>
+                    <div class="metric-box" id="metricMouth">
+                        <span>Mouth</span>
+                        <strong>Closed</strong>
+                    </div>
+                    <div class="metric-box" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">
+                        <span style="color: #fca5a5;">Warnings</span>
+                        <strong style="color: var(--danger); font-size: 1.1rem;" id="warningCounter">0</strong>
+                    </div>
+                </div>
             </div>
 
-            <div class="alerts-card">
-                <h3>AI Alerts</h3>
-                <div id="ai-alerts" class="alerts-stream">
-                    <p class="alert-info">System initialized...</p>
+            <div class="log-card glass-panel">
+                <div class="log-header">
+                    <h3 class="orbitron" style="font-size: 1rem;"><i class="fas fa-list-alt"></i> Event Log</h3>
+                    <div class="indicator" style="display: flex; align-items: center; gap: 5px; font-size: 0.75rem; color: var(--primary);">
+                        <i class="fas fa-sync fa-spin"></i> Syncing
+                    </div>
+                </div>
+                <div class="alerts-stream" id="ai-alerts">
+                    <!-- Alerts will appear here -->
+                    <div class="alert-item" style="border-left-color: var(--success); background: rgba(16, 185, 129, 0.1); color: var(--success);">
+                        <span><i class="fas fa-check"></i> System Initialized</span>
+                        <span class="time" id="initTime"></span>
+                    </div>
                 </div>
             </div>
+
         </div>
 
     </div>
 
-    <!-- Socket.IO for Server-Side AI -->
+    <!-- Socket.IO -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
-
 </html>

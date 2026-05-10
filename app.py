@@ -1,20 +1,30 @@
+import eventlet
+eventlet.monkey_patch()
+
 import os
 import warnings
 import base64
 import cv2
 import numpy as np
 import mediapipe as mp
-from flask import Flask, render_template
+from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_socketio import SocketIO, emit
 import logging
 
-# Silence all warnings and info logs
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-warnings.filterwarnings("ignore")
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
+# Candidate Credentials
+users = {
+    "AIML001": "1234",
+    "AIML002": "abcd",
+    "AIML003": "pass"
+}
 
-from mediapipe.python.solutions import face_mesh as mp_face_mesh
+# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+# warnings.filterwarnings("ignore")
+# log = logging.getLogger('werkzeug')
+# log.setLevel(logging.ERROR)
+
+# from mediapipe.python.solutions import face_mesh as mp_face_mesh
+mp_face_mesh = mp.solutions.face_mesh
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -30,7 +40,20 @@ face_mesh = mp_face_mesh.FaceMesh(
 
 @app.route("/")
 def home():
-    return render_template("index.html")
+    return redirect(url_for('login'))
+
+@app.route("/login", methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        candidate_id = request.form.get('candidate_id')
+        password = request.form.get('password')
+        
+        if candidate_id in users and users[candidate_id] == password:
+            return redirect(url_for('dashboard'))
+        else:
+            return render_template("login.html", error="Invalid Candidate ID or Password")
+            
+    return render_template("login.html")
 
 @app.route("/exam")
 def exam():
@@ -39,6 +62,11 @@ def exam():
 @app.route("/dashboard")
 def dashboard():
     return render_template("dashboard.html")
+
+@app.route("/admin")
+def admin():
+    return render_template("admin.html")
+
 
 @socketio.on('process_frame')
 def handle_frame(data):
@@ -94,8 +122,7 @@ def handle_frame(data):
             emit('proctor_update', {'status': 'warning', 'message': 'Mouth Movement Detected'})
 
     except Exception as e:
-        # print(f"Error: {e}")
-        pass
+        print(f"Socket Error: {e}")
 
 if __name__ == "__main__":
     print("--- AI PROCTOR STARTED (Debug Mode Active) ---")

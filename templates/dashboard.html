@@ -1,73 +1,130 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
-
+    <title>AI ProctorX | Candidate Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-
 <body>
 
-    <nav class="navbar">
-        <h1>AI Proctor</h1>
-        <ul>
-            <li><a href="/">Home</a></li>
-            <li><a href="/dashboard">Dashboard</a></li>
-            <li><a href="/exam">Start Exam</a></li>
+    <nav class="navbar glass-panel">
+        <div class="nav-brand text-gradient">
+            <i class="fas fa-shield-virus"></i> AI ProctorX
+        </div>
+        <ul class="nav-links">
+            <li><a href="#" class="active">Dashboard</a></li>
+            <li><a href="/exam">Exam Portal</a></li>
         </ul>
+        <div style="display: flex; gap: 15px; align-items: center;">
+            <div class="user-badge">
+                <i class="fas fa-user-astronaut"></i> ID: AIML-2026
+            </div>
+            <a href="/login" class="btn-glow" style="padding: 8px 16px; font-size: 0.8rem; border-color: rgba(255,255,255,0.2);">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
     </nav>
 
-    <div class="dashboard">
+    <main class="dashboard-container">
+        
+        <header class="dash-header glass-panel" style="padding: 40px; margin-bottom: 40px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--primary);">
+            <div>
+                <h2 class="orbitron text-gradient" style="margin-bottom: 5px;">Welcome, Candidate</h2>
+                <p>Academic Year 2026-27 | End-to-End Encrypted Session</p>
+            </div>
+            <div style="display: flex; gap: 15px;">
+                <button class="btn-glow" style="border-color: rgba(255,255,255,0.2);"><i class="fas fa-book"></i> Read Instructions</button>
+                <a href="/exam" class="btn-glow"><i class="fas fa-rocket"></i> Launch Exam Gateway</a>
+            </div>
+        </header>
 
-        <h1>Admin Dashboard</h1>
-
-        <div class="dashboard-cards">
-
-            <div class="dash-card">
-                <h2>12</h2>
-                <p>Total Students</p>
+        <h3 class="orbitron" style="margin-bottom: 20px; font-size: 1.2rem; color: var(--text-light);"><i class="fas fa-server"></i> System Telemetry</h3>
+        
+        <div class="status-grid">
+            <div class="status-card glass-panel theme-success">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div class="icon-wrapper"><i class="fas fa-video"></i></div>
+                    <span class="indicator"><i class="fas fa-circle" style="font-size: 8px;"></i> Active</span>
+                </div>
+                <div>
+                    <h3>Camera Status</h3>
+                    <div class="value">Ready</div>
+                </div>
             </div>
 
-            <div class="dash-card">
-                <h2>4</h2>
-                <p>Warnings Detected</p>
+            <div class="status-card glass-panel theme-primary">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div class="icon-wrapper"><i class="fas fa-brain"></i></div>
+                    <span class="indicator"><i class="fas fa-circle" style="font-size: 8px;"></i> Monitoring</span>
+                </div>
+                <div>
+                    <h3>AI Engine Status</h3>
+                    <div class="value">Online</div>
+                </div>
             </div>
 
-            <div class="dash-card">
-                <h2>2</h2>
-                <p>Multiple Face Cases</p>
+            <div class="status-card glass-panel theme-success">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div class="icon-wrapper"><i class="fas fa-wifi"></i></div>
+                    <span class="indicator"><i class="fas fa-circle" style="font-size: 8px;"></i> Stable</span>
+                </div>
+                <div>
+                    <h3>Network Uplink</h3>
+                    <div class="value">24ms</div>
+                </div>
             </div>
 
+            <div class="status-card glass-panel theme-warning">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div class="icon-wrapper"><i class="fas fa-user-check"></i></div>
+                    <span class="indicator"><i class="fas fa-circle" style="font-size: 8px;"></i> Required</span>
+                </div>
+                <div>
+                    <h3>Face Verification</h3>
+                    <div class="value">Pending</div>
+                </div>
+            </div>
         </div>
 
-
-        <div class="table-box">
-
+        <div class="table-container glass-panel">
+            <div class="table-header">
+                <h3 class="orbitron"><i class="fas fa-history"></i> Examination History</h3>
+            </div>
             <table>
-                <tr>
-                    <th>Time</th>
-                    <th>Event</th>
-                </tr>
-
-                <tr>
-                    <td>10:02 AM</td>
-                    <td>Looking Away Detected</td>
-                </tr>
-
-                <tr>
-                    <td>10:06 AM</td>
-                    <td>Multiple Faces Detected</td>
-                </tr>
-
+                <thead>
+                    <tr>
+                        <th>Exam ID</th>
+                        <th>Timestamp</th>
+                        <th>Integrity Score</th>
+                        <th>Violations</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="mono">#SYS-099X</td>
+                        <td>2026-05-09 10:00:00</td>
+                        <td><span class="text-gradient mono" style="font-weight: 700;">98.5%</span></td>
+                        <td>0</td>
+                        <td><span class="badge success">Verified</span></td>
+                        <td><a href="#" style="color: var(--primary);">View Report</a></td>
+                    </tr>
+                    <tr>
+                        <td class="mono">#SYS-102Y</td>
+                        <td>2026-05-10 14:30:00</td>
+                        <td><span class="mono" style="color: var(--warning); font-weight: 700;">85.0%</span></td>
+                        <td>2</td>
+                        <td><span class="badge warning">Flagged</span></td>
+                        <td><a href="#" style="color: var(--primary);">View Report</a></td>
+                    </tr>
+                </tbody>
             </table>
-
         </div>
-
-    </div>
+        
+    </main>
 
 </body>
-
 </html>
