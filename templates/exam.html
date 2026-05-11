@@ -8,28 +8,29 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-
+    <!-- Navbar -->
     <nav class="navbar glass-panel">
-        <div class="nav-brand text-gradient">
-            <i class="fas fa-shield-virus"></i> AI ProctorX Gateway
-        </div>
-        <div class="user-badge" style="border-color: var(--danger); color: var(--danger); background: rgba(239, 68, 68, 0.1);">
-            <i class="fas fa-record-vinyl" style="animation: blink 2s infinite;"></i> LIVE MONITORING ACTIVE
-        </div>
+        <div class="nav-brand text-gradient"><i class="fas fa-shield-virus"></i> AI ProctorX</div>
+        <ul class="nav-links">
+            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/exam" class="active">Exam Portal</a></li>
+        </ul>
+        <div class="user-badge"><i class="fas fa-user-astronaut"></i> ID: AIML-2026</div>
+        <a href="/login" class="btn-glow" style="padding:8px 16px; font-size:0.8rem;"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </nav>
 
-    <div class="exam-layout">
-        
-        <!-- Left Panel: Questions -->
-        <div class="question-panel glass-panel">
-            <div style="border-bottom: 1px solid var(--glass-border); padding-bottom: 20px; margin-bottom: 10px;">
-                <h2 class="orbitron" style="font-size: 1.5rem;">Advanced AI Assessment</h2>
-                <p style="color: var(--text-muted); font-size: 0.9rem;">Please do not look away from the screen.</p>
+    <main class="exam-layout">
+        <!-- Left: Question Panel -->
+        <section class="question-panel">
+            <div style="border-bottom:1px solid var(--glass-border); padding-bottom:20px; margin-bottom:10px;">
+                <h2 class="orbitron" style="font-size:1.5rem;">Advanced AI Assessment</h2>
+                <p style="color:var(--text-muted); font-size:0.9rem;">Please stay focused on the screen.</p>
             </div>
 
-            <div class="question-card glass-panel" style="background: rgba(0,0,0,0.2);">
-                <span class="badge" style="background: var(--primary); color: #000; margin-bottom: 15px;">Question 1</span>
-                <h3>Which of the following neural network architectures is most suitable for sequential data?</h3>
+            <!-- Example Question Card -->
+            <div class="question-card glass-panel" style="background:rgba(0,0,0,0.2);">
+                <span class="badge" style="background:var(--primary); color:#000; margin-bottom:15px;">Question 1</span>
+                <h3>Which neural network architecture is best for sequential data?</h3>
                 <div class="options">
                     <label class="option"><input type="radio" name="q1" value="a"> <span>Convolutional Neural Networks (CNNs)</span></label>
                     <label class="option"><input type="radio" name="q1" value="b"> <span>Recurrent Neural Networks (RNNs)</span></label>
@@ -38,81 +39,62 @@
                 </div>
             </div>
 
-            <div class="question-card glass-panel" style="background: rgba(0,0,0,0.2);">
-                <span class="badge" style="background: var(--primary); color: #000; margin-bottom: 15px;">Question 2</span>
-                <h3>In MediaPipe Face Mesh, how many 3D landmarks are detected on a single face?</h3>
-                <div class="options">
-                    <label class="option"><input type="radio" name="q2" value="a"> <span>68</span></label>
-                    <label class="option"><input type="radio" name="q2" value="b"> <span>468</span></label>
-                    <label class="option"><input type="radio" name="q2" value="c"> <span>1024</span></label>
-                    <label class="option"><input type="radio" name="q2" value="d"> <span>256</span></label>
-                </div>
-            </div>
-
-            <div style="margin-top: 20px; text-align: right;">
+            <div style="margin-top:20px; text-align:right;">
                 <button id="submitBtn" class="btn-glow btn-danger"><i class="fas fa-check-double"></i> Submit Examination</button>
             </div>
-        </div>
+        </section>
 
-        <!-- Right Panel: Monitoring -->
-        <div class="monitoring-panel">
-            
-            <div class="timer-card glass-panel">
-                <p style="text-transform: uppercase; letter-spacing: 2px; font-size: 0.8rem; color: var(--text-muted);">Time Remaining</p>
+        <!-- Right: Monitoring Panel -->
+        <section class="monitoring-panel glass-panel" style="display:flex; flex-direction:column; gap:20px; height:100%;">
+            <!-- Timer -->
+            <div class="timer-card glass-panel" style="text-align:center; padding:20px;">
+                <p style="text-transform:uppercase; letter-spacing:2px; font-size:0.8rem; color:var(--text-muted);">Time Remaining</p>
                 <div class="timer-display" id="timer">60:00</div>
             </div>
 
-            <div class="webcam-card glass-panel">
-                <div class="webcam-header">
-                    <span style="font-family: var(--font-heading); font-size: 0.9rem;"><i class="fas fa-eye"></i> Proctor Feed</span>
+            <!-- Webcam Feed -->
+            <div class="webcam-card glass-panel" style="flex-grow:1; display:flex; flex-direction:column; gap:12px;">
+                <div class="webcam-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-family:var(--font-heading); font-size:0.9rem;"><i class="fas fa-video"></i> Live Webcam</span>
                     <span class="recording-indicator" id="overallStatus"><i class="fas fa-circle"></i> SECURE</span>
                 </div>
                 
-                <div class="video-wrapper" id="videoWrapper">
-                    <video id="video" autoplay playsinline></video>
+                <!-- Large Camera Display -->
+                <div class="video-wrapper" id="videoWrapper" style="position:relative; width:100%; height:280px; background:#000; border-radius:12px; overflow:hidden; border:2px solid var(--primary); box-shadow:0 0 15px var(--success-glow);">
+                    <video id="video" autoplay playsinline style="width:100%; height:100%; object-fit:cover; transform:scaleX(-1);"></video>
                 </div>
-
-                <div class="metrics-grid">
-                    <div class="metric-box" id="metricFace">
-                        <span>Face Track</span>
-                        <strong>Locked</strong>
+                
+                <!-- Live Warnings Display -->
+                <div id="live-warnings" style="min-height:30px; display:flex; flex-wrap:wrap; gap:8px; justify-content:center; align-items:center;"></div>
+                
+                <!-- Three Warning Boxes Below Camera -->
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+                    <!-- Eye Moments Warning -->
+                    <div class="warning-box glass-panel" id="eye-warning" style="padding:12px; border-radius:8px; border:1px solid #00ff88; text-align:center; background:rgba(0,0,0,0.3); min-height:60px; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                        <div style="font-size:1.8rem; margin-bottom:4px;"><i class="fas fa-eye"></i></div>
+                        <div style="font-size:0.7rem; color:var(--text-muted);">Eye Moments</div>
+                        <div id="eye-status" style="font-size:0.8rem; color:#00ff88; margin-top:4px; font-weight:500;">✓ Normal</div>
                     </div>
-                    <div class="metric-box" id="metricEye">
-                        <span>Eye Gaze</span>
-                        <strong>Centered</strong>
+                    
+                    <!-- Head Moments Warning -->
+                    <div class="warning-box glass-panel" id="head-warning" style="padding:12px; border-radius:8px; border:1px solid #00ff88; text-align:center; background:rgba(0,0,0,0.3); min-height:60px; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                        <div style="font-size:1.8rem; margin-bottom:4px;"><i class="fas fa-head-side-virus"></i></div>
+                        <div style="font-size:0.7rem; color:var(--text-muted);">Head Moments</div>
+                        <div id="head-status" style="font-size:0.8rem; color:#00ff88; margin-top:4px; font-weight:500;">✓ Normal</div>
                     </div>
-                    <div class="metric-box" id="metricMouth">
-                        <span>Mouth</span>
-                        <strong>Closed</strong>
-                    </div>
-                    <div class="metric-box" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">
-                        <span style="color: #fca5a5;">Warnings</span>
-                        <strong style="color: var(--danger); font-size: 1.1rem;" id="warningCounter">0</strong>
-                    </div>
-                </div>
-            </div>
-
-            <div class="log-card glass-panel">
-                <div class="log-header">
-                    <h3 class="orbitron" style="font-size: 1rem;"><i class="fas fa-list-alt"></i> Event Log</h3>
-                    <div class="indicator" style="display: flex; align-items: center; gap: 5px; font-size: 0.75rem; color: var(--primary);">
-                        <i class="fas fa-sync fa-spin"></i> Syncing
-                    </div>
-                </div>
-                <div class="alerts-stream" id="ai-alerts">
-                    <!-- Alerts will appear here -->
-                    <div class="alert-item" style="border-left-color: var(--success); background: rgba(16, 185, 129, 0.1); color: var(--success);">
-                        <span><i class="fas fa-check"></i> System Initialized</span>
-                        <span class="time" id="initTime"></span>
+                    
+                    <!-- Mouth Moments Warning -->
+                    <div class="warning-box glass-panel" id="mouth-warning" style="padding:12px; border-radius:8px; border:1px solid #00ff88; text-align:center; background:rgba(0,0,0,0.3); min-height:60px; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                        <div style="font-size:1.8rem; margin-bottom:4px;"><i class="fas fa-mouth"></i></div>
+                        <div style="font-size:0.7rem; color:var(--text-muted);">Mouth Moments</div>
+                        <div id="mouth-status" style="font-size:0.8rem; color:#00ff88; margin-top:4px; font-weight:500;">✓ Normal</div>
                     </div>
                 </div>
             </div>
+</section>
+    </main>
 
-        </div>
-
-    </div>
-
-    <!-- Socket.IO -->
+    <!-- Socket.IO and main JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>

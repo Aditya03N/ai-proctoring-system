@@ -2,12 +2,16 @@ import eventlet
 eventlet.monkey_patch()
 
 import os
+import socket
 import warnings
 import base64
 import cv2
 import numpy as np
 import mediapipe as mp
-from flask import Flask, render_template, request, redirect, url_for, flash
+from datetime import datetime
+
+
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_socketio import SocketIO, emit
 import logging
 
@@ -25,18 +29,62 @@ users = {
 
 # from mediapipe.python.solutions import face_mesh as mp_face_mesh
 mp_face_mesh = mp.solutions.face_mesh
+face_mesh = mp_face_mesh.FaceMesh(
+    static_image_mode=False,
+    max_num_faces=1,
+    refine_landmarks=False,
+    min_detection_confidence=0.5,
+    min_tracking_confidence=0.5
+)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, cors_allowed_origins="*", logger=False, engineio_logger=False)
+active_warnings_by_sid = {}
 
-# Initialize MediaPipe Face Mesh
-face_mesh = mp_face_mesh.FaceMesh(
-    max_num_faces=1,
-    refine_landmarks=True,
-    min_detection_confidence=0.5,
-    min_tracking_confidence=0.5
-)
+# Simple detection thresholds (reverting to working system)
+FACE_NOT_VISIBLE_THRESHOLD = 5  # Quick detection
+LOOKING_AWAY_THRESHOLD = 8      # Faster response
+MOUTH_MOVEMENT_THRESHOLD = 5    # Quick detection
+
+def store_warning(message):
+    """Store warning in session with timestamp"""
+    if 'exam_warnings' not in session:
+        session['exam_warnings'] = []
+    
+    warning_entry = {
+        'message': message,
+        'timestamp': datetime.now().strftime('%H:%M:%S'),
+        'date': datetime.now().strftime('%Y-%m-%d')
+    }
+    
+    session['exam_warnings'].append(warning_entry)
+    session.modified = True
+
+def emit_warning_state(active_warnings):
+    previous_warnings = active_warnings_by_sid.get(request.sid, set())
+    current_warnings = set(active_warnings)
+
+    for warning in current_warnings - previous_warnings:
+        store_warning(warning)
+
+    active_warnings_by_sid[request.sid] = current_warnings
+    emit('proctor_update', {
+        'status': 'warning' if active_warnings else 'normal',
+        'warnings': active_warnings
+    })
+
+def find_available_port(start_port=5000, max_attempts=20):
+    """Return the first localhost port available from start_port upward."""
+    for port in range(start_port, start_port + max_attempts):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as test_socket:
+            try:
+                test_socket.bind(("127.0.0.1", port))
+                return port
+            except OSError:
+                continue
+
+    raise OSError(f"No available port found from {start_port} to {start_port + max_attempts - 1}")
 
 @app.route("/")
 def home():
@@ -57,6 +105,9 @@ def login():
 
 @app.route("/exam")
 def exam():
+    # Clear previous exam warnings when starting new exam
+    if 'exam_warnings' in session:
+        session.pop('exam_warnings')
     return render_template("exam.html")
 
 @app.route("/dashboard")
@@ -84,16 +135,17 @@ def handle_frame(data):
         results = face_mesh.process(rgb_frame)
 
         if not results.multi_face_landmarks:
-            emit('proctor_update', {'status': 'warning', 'message': 'Candidate Not Visible'})
+            emit_warning_state(['Face Not Visible'])
             return
 
         landmarks = results.multi_face_landmarks[0].landmark
-        
+        active_warnings = []
+
         # --- GAZE LOGIC ---
         nose = landmarks[1]
         left_eye = landmarks[33]
         right_eye = landmarks[263]
-        
+
         dist_left = abs(nose.x - left_eye.x)
         dist_right = abs(nose.x - right_eye.x)
         gaze_ratio = dist_left / (dist_right + 1e-6)
@@ -106,25 +158,35 @@ def handle_frame(data):
         # DEBUG PRINTS FOR TUNING
         print(f"Gaze: {gaze_ratio:.2f} | Vertical: {v_ratio:.2f} | Mouth: {abs(landmarks[13].y - landmarks[14].y):.3f}")
 
-        # Horizontal Alerts
-        if gaze_ratio < 0.75: # Looking Right
-            emit('proctor_update', {'status': 'warning', 'message': 'Looking Away (Right)'})
-        elif gaze_ratio > 1.35: # Looking Left
-            emit('proctor_update', {'status': 'warning', 'message': 'Looking Away (Left)'})
+        # Simple detection (reverting to working system)
+        if gaze_ratio < 0.7: # Looking Right
+            active_warnings.append('Looking Right')
+        elif gaze_ratio > 1.4: # Looking Left
+            active_warnings.append('Looking Left')
 
-        # Vertical Alerts
-        if v_ratio > 1.25: # Looking Down
-            emit('proctor_update', {'status': 'warning', 'message': 'Looking Down Detected'})
+        if v_ratio > 1.3: # Looking Down
+            active_warnings.append('Looking Down')
 
         # Mouth Alerts
         m_dist = abs(landmarks[13].y - landmarks[14].y)
-        if m_dist > 0.045:
-            emit('proctor_update', {'status': 'warning', 'message': 'Mouth Movement Detected'})
+        if m_dist > 0.06: # Mouth Movement
+            active_warnings.append('Suspicious Mouth Movement')
+
+        emit_warning_state(active_warnings)
 
     except Exception as e:
         print(f"Socket Error: {e}")
 
+@socketio.on('disconnect')
+def handle_disconnect():
+    active_warnings_by_sid.pop(request.sid, None)
+
 if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    available_port = find_available_port(port)
+
     print("--- AI PROCTOR STARTED (Debug Mode Active) ---")
-    print("Visit: http://127.0.0.1:5000")
-    socketio.run(app, debug=False)
+    if available_port != port:
+        print(f"Port {port} is already in use; using port {available_port} instead.")
+    print(f"Visit: http://127.0.0.1:{available_port}")
+    socketio.run(app, host="127.0.0.1", port=available_port, debug=False)
