@@ -19,8 +19,8 @@ users = {
 }
 
 candidate_names = {
-    "AIML001": "Rahul",
-    "AIML002": "Priya",
+    "AIML001": "Aditya",
+    "AIML002": "rushi",
     "AIML003": "Arjun"
 }
 
@@ -44,7 +44,7 @@ def add_activity_log(student_id, username, warning, entry_type='warning'):
         'student': student_id,
         'username': username,
         'activity': warning,
-        'time': datetime.now().strftime('%I:%M %p'),
+        'time': datetime.now().strftime('%I:%M:%S %p'),
         'type': entry_type
     }
     activity_logs.insert(0, entry)
