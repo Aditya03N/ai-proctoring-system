@@ -15,7 +15,7 @@
             <li><a href="/dashboard">Dashboard</a></li>
             <li><a href="/exam" class="active">Exam Portal</a></li>
         </ul>
-        <div class="user-badge"><i class="fas fa-user-astronaut"></i> ID: AIML-2026</div>
+        <div class="user-badge"><i class="fas fa-user-astronaut"></i> ID: {{ candidate_id }}{% if candidate_name %} • {{ candidate_name }}{% endif %}</div>
         <a href="/login" class="btn-glow" style="padding:8px 16px; font-size:0.8rem;"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </nav>
 

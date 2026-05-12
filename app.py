@@ -1,9 +1,5 @@
-import eventlet
-eventlet.monkey_patch()
-
 import os
 import socket
-import warnings
 import base64
 import cv2
 import numpy as np
@@ -11,7 +7,7 @@ import mediapipe as mp
 from datetime import datetime
 
 
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_socketio import SocketIO, emit
 import logging
 
@@ -22,24 +18,85 @@ users = {
     "AIML003": "pass"
 }
 
+candidate_names = {
+    "AIML001": "Rahul",
+    "AIML002": "Priya",
+    "AIML003": "Arjun"
+}
+
+admin_users = {
+    "admin": "admin"
+}
+
+activity_logs = []
+active_sessions_by_sid = {}
+
+MAX_LOG_ENTRIES = 80
+
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 # warnings.filterwarnings("ignore")
 # log = logging.getLogger('werkzeug')
 # log.setLevel(logging.ERROR)
 
-# from mediapipe.python.solutions import face_mesh as mp_face_mesh
-mp_face_mesh = mp.solutions.face_mesh
-face_mesh = mp_face_mesh.FaceMesh(
-    static_image_mode=False,
-    max_num_faces=1,
-    refine_landmarks=False,
-    min_detection_confidence=0.5,
-    min_tracking_confidence=0.5
-)
+
+def add_activity_log(student_id, username, warning, entry_type='warning'):
+    entry = {
+        'student': student_id,
+        'username': username,
+        'activity': warning,
+        'time': datetime.now().strftime('%I:%M %p'),
+        'type': entry_type
+    }
+    activity_logs.insert(0, entry)
+    if len(activity_logs) > MAX_LOG_ENTRIES:
+        del activity_logs[MAX_LOG_ENTRIES:]
+
+def create_face_detector():
+    """Create a face landmark detector for either classic or Tasks MediaPipe."""
+    if hasattr(mp, "solutions"):
+        mp_face_mesh = mp.solutions.face_mesh
+        return "solutions", mp_face_mesh.FaceMesh(
+            static_image_mode=False,
+            max_num_faces=1,
+            refine_landmarks=False,
+            min_detection_confidence=0.5,
+            min_tracking_confidence=0.5
+        )
+
+    from mediapipe.tasks.python import BaseOptions
+    from mediapipe.tasks.python import vision
+
+    model_path = os.path.join(os.path.dirname(__file__), "face_landmarker.task")
+    options = vision.FaceLandmarkerOptions(
+        base_options=BaseOptions(model_asset_path=model_path),
+        running_mode=vision.RunningMode.IMAGE,
+        num_faces=1,
+        min_face_detection_confidence=0.5,
+        min_face_presence_confidence=0.5,
+        min_tracking_confidence=0.5
+    )
+    return "tasks", vision.FaceLandmarker.create_from_options(options)
+
+
+face_detector_mode, face_detector = create_face_detector()
+
+
+def detect_face_landmarks(rgb_frame):
+    if face_detector_mode == "solutions":
+        results = face_detector.process(rgb_frame)
+        if not results.multi_face_landmarks:
+            return None
+        return results.multi_face_landmarks[0].landmark
+
+    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
+    results = face_detector.detect(mp_image)
+    if not results.face_landmarks:
+        return None
+    return results.face_landmarks[0]
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app, cors_allowed_origins="*", logger=False, engineio_logger=False)
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading", logger=False, engineio_logger=False)
 active_warnings_by_sid = {}
 
 # Simple detection thresholds (reverting to working system)
@@ -61,17 +118,41 @@ def store_warning(message):
     session['exam_warnings'].append(warning_entry)
     session.modified = True
 
+
 def emit_warning_state(active_warnings):
     previous_warnings = active_warnings_by_sid.get(request.sid, set())
     current_warnings = set(active_warnings)
 
+    student_id = session.get('candidate_id', 'AIML000')
+    username = session.get('candidate_name', candidate_names.get(student_id, 'Candidate'))
+
+    if request.sid not in active_sessions_by_sid:
+        add_activity_log(student_id, username, 'Exam session started', entry_type='info')
+
+    active_sessions_by_sid[request.sid] = {
+        'student': student_id,
+        'username': username,
+        'connected_at': datetime.now().strftime('%H:%M:%S')
+    }
+
     for warning in current_warnings - previous_warnings:
         store_warning(warning)
+        add_activity_log(student_id, username, warning, entry_type='warning')
 
     active_warnings_by_sid[request.sid] = current_warnings
     emit('proctor_update', {
         'status': 'warning' if active_warnings else 'normal',
         'warnings': active_warnings
+    })
+
+@app.route('/get_logs')
+def get_logs():
+    active_students = len({session_info['student'] for session_info in active_sessions_by_sid.values()})
+    warnings_only = [entry for entry in activity_logs if entry.get('type') == 'warning']
+    return jsonify({
+        'logs': activity_logs,
+        'active_students': active_students,
+        'total_warnings': len(warnings_only)
     })
 
 def find_available_port(start_port=5000, max_attempts=20):
@@ -97,31 +178,67 @@ def login():
         password = request.form.get('password')
         
         if candidate_id in users and users[candidate_id] == password:
+            session['candidate_id'] = candidate_id
+            session['candidate_name'] = candidate_names.get(candidate_id, "Candidate")
             return redirect(url_for('dashboard'))
         else:
             return render_template("login.html", error="Invalid Candidate ID or Password")
             
     return render_template("login.html")
 
+@app.route("/admin", methods=['GET', 'POST'])
+def admin():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        if username in admin_users and admin_users[username] == password:
+            session['admin_logged_in'] = True
+            return redirect(url_for('admin_dashboard'))
+
+        return render_template("admin.html", error="Invalid admin credentials")
+
+    if session.get('admin_logged_in'):
+        return redirect(url_for('admin_dashboard'))
+
+    return render_template("admin.html")
+
+@app.route("/admin/dashboard")
+def admin_dashboard():
+    if not session.get('admin_logged_in'):
+        return redirect(url_for('admin'))
+    return render_template("admin_dashboard.html")
+
+@app.route("/admin/logout")
+def admin_logout():
+    session.pop('admin_logged_in', None)
+    return redirect(url_for('admin'))
+
 @app.route("/exam")
 def exam():
     # Clear previous exam warnings when starting new exam
     if 'exam_warnings' in session:
         session.pop('exam_warnings')
-    return render_template("exam.html")
+
+    return render_template("exam.html", candidate_id=session.get('candidate_id', 'AIML000'), candidate_name=session.get('candidate_name', 'Candidate'))
 
 @app.route("/dashboard")
 def dashboard():
     return render_template("dashboard.html")
 
-@app.route("/admin")
-def admin():
-    return render_template("admin.html")
-
 
 @socketio.on('process_frame')
 def handle_frame(data):
     try:
+        # Keep the active session updated for the connected candidate
+        student_id = session.get('candidate_id', 'AIML000')
+        username = session.get('candidate_name', candidate_names.get(student_id, 'Candidate'))
+        active_sessions_by_sid[request.sid] = {
+            'student': student_id,
+            'username': username,
+            'connected_at': datetime.now().strftime('%H:%M:%S')
+        }
+
         # Decode Base64 Image
         image_data = data['image'].split(",")[1]
         img_bytes = base64.b64decode(image_data)
@@ -132,13 +249,12 @@ def handle_frame(data):
             return
 
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = face_mesh.process(rgb_frame)
+        landmarks = detect_face_landmarks(rgb_frame)
 
-        if not results.multi_face_landmarks:
+        if not landmarks:
             emit_warning_state(['Face Not Visible'])
             return
 
-        landmarks = results.multi_face_landmarks[0].landmark
         active_warnings = []
 
         # --- GAZE LOGIC ---
@@ -180,6 +296,7 @@ def handle_frame(data):
 @socketio.on('disconnect')
 def handle_disconnect():
     active_warnings_by_sid.pop(request.sid, None)
+    active_sessions_by_sid.pop(request.sid, None)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
@@ -189,4 +306,4 @@ if __name__ == "__main__":
     if available_port != port:
         print(f"Port {port} is already in use; using port {available_port} instead.")
     print(f"Visit: http://127.0.0.1:{available_port}")
-    socketio.run(app, host="127.0.0.1", port=available_port, debug=False)
+    socketio.run(app, host="127.0.0.1", port=available_port, debug=False, allow_unsafe_werkzeug=True)

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI ProctorX | Admin Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar glass-panel" style="padding:16px 32px; gap:18px;">
+        <div class="nav-brand" style="gap:12px;">
+            <i class="fas fa-shield-virus"></i>
+            <span>AI ProctorX</span>
+        </div>
+        <div>
+            <span class="badge" style="padding:8px 16px; letter-spacing:1px;">ADMIN PANEL</span>
+        </div>
+        <a href="/admin/logout" class="btn-glow btn-danger" style="padding:12px 20px;">Logout</a>
+    </nav>
+
+    <main class="dashboard-container">
+        <section class="glass-panel" style="padding:32px;">
+            <div class="dash-header" style="margin-bottom: 28px;">
+                <p class="text-gradient" style="font-size:0.95rem; letter-spacing:2px; margin-bottom:10px;">SECURE MONITORING</p>
+                <h2 style="font-size:2.4rem; margin-bottom:10px;">Live Proctoring Control</h2>
+                <p class="text-muted" style="max-width: 720px; line-height:1.6;">A clean, cyber-inspired view of exam activity. Track warning events and student activity as they appear in real time.</p>
+            </div>
+
+            <div class="admin-summary">
+                <article class="glass-panel summary-card">
+                    <h3>Active Students</h3>
+                    <div class="summary-value" id="activeStudents">03</div>
+                    <div class="summary-note">Students currently flagged by the system</div>
+                </article>
+                <article class="glass-panel summary-card">
+                    <h3>Total Warnings</h3>
+                    <div class="summary-value" id="totalWarnings">12</div>
+                    <div class="summary-note">Logged warning events in this session</div>
+                </article>
+            </div>
+        </section>
+
+        <section class="glass-panel live-panel" style="padding:28px;">
+            <div class="panel-header">
+                <div>
+                    <h3 class="orbitron">Live Activity Logs</h3>
+                    <p class="text-muted" style="margin-top:6px; font-size:0.95rem;">Automatically refreshes every 1.5 seconds. New events appear at the top.</p>
+                </div>
+                <div class="status-dot"></div>
+            </div>
+
+            <div class="log-table-container">
+                <table class="log-table">
+                    <thead>
+                        <tr>
+                            <th>Roll No</th>
+                            <th>User Name</th>
+                            <th>Activity Log</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logBody">
+                        <tr>
+                            <td colspan="4" style="padding:40px; text-align:center; color: var(--text-muted);">Loading activity...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/admin-dashboard.js') }}"></script>
+</body>
+</html>
