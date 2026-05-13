@@ -4,6 +4,7 @@ import base64
 import cv2
 import numpy as np
 import mediapipe as mp
+import time
 from datetime import datetime
 
 
@@ -98,11 +99,14 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading", logger=False, engineio_logger=False)
 active_warnings_by_sid = {}
+warning_detection_state_by_sid = {}
 
 # Simple detection thresholds (reverting to working system)
 FACE_NOT_VISIBLE_THRESHOLD = 5  # Quick detection
 LOOKING_AWAY_THRESHOLD = 8      # Faster response
 MOUTH_MOVEMENT_THRESHOLD = 5    # Quick detection
+WARNING_CONFIRMATION_SECONDS = 1.1
+DELAYED_HEAD_WARNINGS = {'Looking Left', 'Looking Right', 'Looking Down'}
 
 def store_warning(message):
     """Store warning in session with timestamp"""
@@ -144,6 +148,35 @@ def emit_warning_state(active_warnings):
         'status': 'warning' if active_warnings else 'normal',
         'warnings': active_warnings
     })
+
+
+def get_confirmed_warnings(detected_warnings):
+    now = time.monotonic()
+    sid = request.sid
+    detection_state = warning_detection_state_by_sid.setdefault(sid, {})
+    detected_head_warning_set = {
+        warning for warning in detected_warnings
+        if warning in DELAYED_HEAD_WARNINGS
+    }
+
+    for warning in list(detection_state):
+        if warning not in detected_head_warning_set:
+            detection_state.pop(warning, None)
+
+    confirmed_warnings = []
+    for warning in detected_warnings:
+        if warning not in DELAYED_HEAD_WARNINGS:
+            confirmed_warnings.append(warning)
+            continue
+
+        started_at = detection_state.setdefault(warning, now)
+        if now - started_at >= WARNING_CONFIRMATION_SECONDS:
+            confirmed_warnings.append(warning)
+
+    if not detection_state:
+        warning_detection_state_by_sid.pop(sid, None)
+
+    return confirmed_warnings
 
 @app.route('/get_logs')
 def get_logs():
@@ -252,6 +285,7 @@ def handle_frame(data):
         landmarks = detect_face_landmarks(rgb_frame)
 
         if not landmarks:
+            get_confirmed_warnings([])
             emit_warning_state(['Face Not Visible'])
             return
 
@@ -277,7 +311,7 @@ def handle_frame(data):
         # Simple detection (reverting to working system)
         if gaze_ratio < 0.7: # Looking Right
             active_warnings.append('Looking Right')
-        elif gaze_ratio > 1.4: # Looking Left
+        elif gaze_ratio > 1.2: # Looking Left
             active_warnings.append('Looking Left')
 
         if v_ratio > 1.3: # Looking Down
@@ -285,10 +319,10 @@ def handle_frame(data):
 
         # Mouth Alerts
         m_dist = abs(landmarks[13].y - landmarks[14].y)
-        if m_dist > 0.03: # Mouth Movement
+        if m_dist > 0.02: # Mouth Movement
             active_warnings.append('Suspicious Mouth Movement')
 
-        emit_warning_state(active_warnings)
+        emit_warning_state(get_confirmed_warnings(active_warnings))
 
     except Exception as e:
         print(f"Socket Error: {e}")
@@ -296,6 +330,7 @@ def handle_frame(data):
 @socketio.on('disconnect')
 def handle_disconnect():
     active_warnings_by_sid.pop(request.sid, None)
+    warning_detection_state_by_sid.pop(request.sid, None)
     active_sessions_by_sid.pop(request.sid, None)
 
 if __name__ == "__main__":
