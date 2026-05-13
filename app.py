@@ -285,7 +285,7 @@ def handle_frame(data):
 
         # Mouth Alerts
         m_dist = abs(landmarks[13].y - landmarks[14].y)
-        if m_dist > 0.06: # Mouth Movement
+        if m_dist > 0.03: # Mouth Movement
             active_warnings.append('Suspicious Mouth Movement')
 
         emit_warning_state(active_warnings)
