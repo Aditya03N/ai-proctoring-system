@@ -2,7 +2,7 @@
 
 ## Team Name
 
-[VIGILANCE AI]
+VIGILANCE AI
 
 ## Project Description
 
