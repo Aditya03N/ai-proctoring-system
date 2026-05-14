@@ -16,6 +16,8 @@ const headStatus = document.getElementById('head-status');
 const mouthStatus = document.getElementById('mouth-status');
 
 const socket = io();
+let frameIntervalId = null;
+let monitoringStopped = false;
 
 const WARNING_TYPES = {
     normal: { color: '#00ff88', icon: '<i class="fas fa-check"></i>' },
@@ -129,6 +131,7 @@ const canvas = document.createElement('canvas');
 const context = canvas.getContext('2d', { willReadFrequently: true });
 
 function sendFrame() {
+    if (monitoringStopped) return;
     if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
         canvas.width = 320;
         canvas.height = 240;
@@ -138,11 +141,55 @@ function sendFrame() {
     }
 }
 
+function collectAnswers() {
+    const answers = {};
+    document.querySelectorAll('input[type="radio"]:checked').forEach((input) => {
+        answers[input.name] = input.value;
+    });
+    return answers;
+}
+
+function stopMonitoring() {
+    monitoringStopped = true;
+    if (frameIntervalId) {
+        clearInterval(frameIntervalId);
+        frameIntervalId = null;
+    }
+    if (videoElement?.srcObject) {
+        videoElement.srcObject.getTracks().forEach((track) => track.stop());
+        videoElement.srcObject = null;
+    }
+    socket.disconnect();
+}
+
+async function submitCurrentAnswers() {
+    const answers = collectAnswers();
+    try {
+        await fetch('/exam/auto_submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ answers }),
+            keepalive: true
+        });
+    } catch (error) {
+        console.warn('Auto-submit failed:', error);
+    }
+}
+
+async function completeExam(terminated = false, message = null) {
+    stopMonitoring();
+    if (terminated && message) {
+        alert(message);
+    }
+    await submitCurrentAnswers();
+    window.location.href = '/exam/completed';
+}
+
 if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
     navigator.mediaDevices.getUserMedia({ video: true })
         .then((stream) => {
             videoElement.srcObject = stream;
-            setInterval(sendFrame, 500);
+            frameIntervalId = setInterval(sendFrame, 500);
         })
         .catch((err) => {
             renderWarnings(['Camera Error: ' + err.message]);
@@ -176,7 +223,14 @@ socket.on('connect', () => {
     console.log('Connected to AI Server');
 });
 
+socket.on('exam_terminated', (data) => {
+    completeExam(true, data.message || 'Your exam has been terminated by the administrator due to suspicious activity.');
+});
+
 document.getElementById('submitBtn')?.addEventListener('click', () => {
     alert('Examination Submitted Securely. Disconnecting link.');
-    window.location.href = '/dashboard';
+    stopMonitoring();
+    submitCurrentAnswers().finally(() => {
+        window.location.href = '/dashboard';
+    });
 });

@@ -31,6 +31,7 @@ admin_users = {
 
 activity_logs = []
 active_sessions_by_sid = {}
+exam_status_by_student = {}
 
 MAX_LOG_ENTRIES = 80
 
@@ -51,6 +52,47 @@ def add_activity_log(student_id, username, warning, entry_type='warning'):
     activity_logs.insert(0, entry)
     if len(activity_logs) > MAX_LOG_ENTRIES:
         del activity_logs[MAX_LOG_ENTRIES:]
+
+
+def get_exam_status(student_id):
+    return exam_status_by_student.setdefault(student_id, {
+        'terminated': False,
+        'submitted': False,
+        'answers': {},
+        'terminated_at': None,
+        'submitted_at': None
+    })
+
+
+def auto_submit_exam(student_id, answers=None, terminated=False):
+    status = get_exam_status(student_id)
+    if answers is not None:
+        status['answers'] = answers
+    status['submitted'] = True
+    status['submitted_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    if terminated:
+        status['terminated'] = True
+        status['terminated_at'] = status['terminated_at'] or status['submitted_at']
+    return status
+
+
+def terminate_student_exam(student_id):
+    username = candidate_names.get(student_id, 'Candidate')
+    already_terminated = get_exam_status(student_id).get('terminated', False)
+    status = auto_submit_exam(student_id, terminated=True)
+
+    if not already_terminated:
+        add_activity_log(student_id, username, 'Exam terminated by administrator', entry_type='terminated')
+
+    for sid, session_info in list(active_sessions_by_sid.items()):
+        if session_info.get('student') == student_id:
+            active_warnings_by_sid.pop(sid, None)
+            warning_detection_state_by_sid.pop(sid, None)
+            socketio.emit('exam_terminated', {
+                'message': 'Your exam has been terminated by the administrator due to suspicious activity.'
+            }, to=sid)
+
+    return status
 
 def create_face_detector():
     """Create a face landmark detector for either classic or Tasks MediaPipe."""
@@ -182,10 +224,13 @@ def get_confirmed_warnings(detected_warnings):
 def get_logs():
     active_students = len({session_info['student'] for session_info in active_sessions_by_sid.values()})
     warnings_only = [entry for entry in activity_logs if entry.get('type') == 'warning']
+    active_student_ids = {session_info['student'] for session_info in active_sessions_by_sid.values()}
     return jsonify({
         'logs': activity_logs,
         'active_students': active_students,
-        'total_warnings': len(warnings_only)
+        'total_warnings': len(warnings_only),
+        'active_student_ids': list(active_student_ids),
+        'exam_statuses': exam_status_by_student
     })
 
 def find_available_port(start_port=5000, max_attempts=20):
@@ -247,13 +292,56 @@ def admin_logout():
     session.pop('admin_logged_in', None)
     return redirect(url_for('admin'))
 
+@app.route("/admin/terminate_exam/<student_id>", methods=['POST'])
+def terminate_exam(student_id):
+    if not session.get('admin_logged_in'):
+        return jsonify({'success': False, 'message': 'Admin login required'}), 403
+
+    if student_id not in users:
+        return jsonify({'success': False, 'message': 'Student not found'}), 404
+
+    status = terminate_student_exam(student_id)
+    return jsonify({
+        'success': True,
+        'student_id': student_id,
+        'status': status
+    })
+
 @app.route("/exam")
 def exam():
+    student_id = session.get('candidate_id')
+    if not student_id:
+        return redirect(url_for('login'))
+
+    if get_exam_status(student_id).get('terminated'):
+        return redirect(url_for('exam_completed'))
+
     # Clear previous exam warnings when starting new exam
     if 'exam_warnings' in session:
         session.pop('exam_warnings')
 
     return render_template("exam.html", candidate_id=session.get('candidate_id', 'AIML000'), candidate_name=session.get('candidate_name', 'Candidate'))
+
+@app.route("/exam/auto_submit", methods=['POST'])
+def exam_auto_submit():
+    student_id = session.get('candidate_id')
+    if not student_id:
+        return jsonify({'success': False, 'message': 'Candidate login required'}), 403
+
+    data = request.get_json(silent=True) or {}
+    answers = data.get('answers', {})
+    terminated = get_exam_status(student_id).get('terminated', False)
+    auto_submit_exam(student_id, answers=answers, terminated=terminated)
+    return jsonify({'success': True, 'terminated': terminated})
+
+@app.route("/exam/completed")
+def exam_completed():
+    student_id = session.get('candidate_id')
+    status = get_exam_status(student_id) if student_id else {}
+    message = None
+    if status.get('terminated'):
+        message = 'Your exam has been terminated by the administrator due to suspicious activity.'
+    return render_template("exam_completed.html", message=message, status=status)
 
 @app.route("/dashboard")
 def dashboard():
@@ -266,6 +354,14 @@ def handle_frame(data):
         # Keep the active session updated for the connected candidate
         student_id = session.get('candidate_id', 'AIML000')
         username = session.get('candidate_name', candidate_names.get(student_id, 'Candidate'))
+        if get_exam_status(student_id).get('terminated'):
+            active_warnings_by_sid.pop(request.sid, None)
+            warning_detection_state_by_sid.pop(request.sid, None)
+            emit('exam_terminated', {
+                'message': 'Your exam has been terminated by the administrator due to suspicious activity.'
+            })
+            return
+
         active_sessions_by_sid[request.sid] = {
             'student': student_id,
             'username': username,

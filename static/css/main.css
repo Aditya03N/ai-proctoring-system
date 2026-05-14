@@ -254,6 +254,9 @@ tr:hover td { background: rgba(255, 255, 255, 0.02); }
 .log-table .roll { font-family: var(--font-mono); color: var(--primary); }
 .log-table .activity { color: #cbd5e1; }
 .log-table .time { color: var(--text-muted); font-family: var(--font-mono); }
+.terminate-btn { padding: 9px 13px; font-size: 0.72rem; white-space: nowrap; }
+.terminate-btn:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }
+.terminated-badge { color: var(--danger); border: 1px solid var(--danger-glow); background: rgba(239, 68, 68, 0.12); white-space: nowrap; }
 
 .new-entry { animation: pulseEntry 0.9s ease; }
 @keyframes pulseEntry { from { transform: scale(1.01); background: rgba(0, 242, 255, 0.12); } to { transform: scale(1); background: transparent; } }

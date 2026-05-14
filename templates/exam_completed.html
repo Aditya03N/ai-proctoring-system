@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI ProctorX | Examination Complete</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar glass-panel">
+        <div class="nav-brand text-gradient"><i class="fas fa-shield-virus"></i> AI ProctorX</div>
+        <ul class="nav-links">
+            <li><a href="/dashboard">Dashboard</a></li>
+        </ul>
+        <a href="/login" class="btn-glow" style="padding:8px 16px; font-size:0.8rem;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </nav>
+
+    <main class="dashboard-container" style="max-width:760px; margin:auto;">
+        <section class="glass-panel" style="padding:36px; text-align:center;">
+            {% if message %}
+                <p class="badge warning" style="margin-bottom:18px; border-color:var(--danger-glow); color:var(--danger); background:rgba(239, 68, 68, 0.1);">TERMINATED</p>
+                <h2 class="orbitron" style="font-size:2rem; margin-bottom:16px;">Examination Terminated</h2>
+                <p style="color:var(--text-light); line-height:1.7;">{{ message }}</p>
+            {% else %}
+                <p class="badge success" style="margin-bottom:18px;">SUBMITTED</p>
+                <h2 class="orbitron text-gradient" style="font-size:2rem; margin-bottom:16px;">Examination Submitted</h2>
+                <p style="color:var(--text-muted); line-height:1.7;">Your examination has been submitted successfully.</p>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>
