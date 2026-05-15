@@ -18,6 +18,8 @@ const mouthStatus = document.getElementById('mouth-status');
 const socket = io();
 let frameIntervalId = null;
 let monitoringStopped = false;
+let tabViolationTimer = null;
+let tabViolationTriggered = false;
 
 const WARNING_TYPES = {
     normal: { color: '#00ff88', icon: '<i class="fas fa-check"></i>' },
@@ -176,6 +178,49 @@ async function submitCurrentAnswers() {
     }
 }
 
+function disableExamInteraction() {
+    document.querySelectorAll('input, button').forEach((element) => {
+        element.disabled = true;
+    });
+}
+
+async function reportTabViolation() {
+    if (tabViolationTriggered) return;
+    tabViolationTriggered = true;
+
+    try {
+        await fetch('/exam/tab_violation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ violation_type: 'TAB_SWITCH_TERMINATION' }),
+            keepalive: true
+        });
+    } catch (error) {
+        console.warn('Tab switch termination report failed:', error);
+    }
+}
+
+function onFocusLossDetected() {
+    if (tabViolationTriggered) return;
+    if (tabViolationTimer) return;
+
+    tabViolationTimer = setTimeout(async () => {
+        tabViolationTimer = null;
+        if (!document.hasFocus() || document.visibilityState === 'hidden') {
+            disableExamInteraction();
+            await reportTabViolation();
+            completeExam(true, 'Your exam has been automatically terminated due to tab switching violation.');
+        }
+    }, 1000);
+}
+
+function cancelFocusLossDetection() {
+    if (tabViolationTimer) {
+        clearTimeout(tabViolationTimer);
+        tabViolationTimer = null;
+    }
+}
+
 async function completeExam(terminated = false, message = null) {
     stopMonitoring();
     if (terminated && message) {
@@ -225,6 +270,22 @@ socket.on('connect', () => {
 
 socket.on('exam_terminated', (data) => {
     completeExam(true, data.message || 'Your exam has been terminated by the administrator due to suspicious activity.');
+});
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+        onFocusLossDetected();
+    } else {
+        cancelFocusLossDetection();
+    }
+});
+
+window.addEventListener('blur', () => {
+    onFocusLossDetected();
+});
+
+window.addEventListener('focus', () => {
+    cancelFocusLossDetection();
 });
 
 document.getElementById('submitBtn')?.addEventListener('click', () => {

@@ -30,6 +30,7 @@ admin_users = {
 }
 
 activity_logs = []
+violation_logs = []
 active_sessions_by_sid = {}
 exam_status_by_student = {}
 
@@ -60,8 +61,23 @@ def get_exam_status(student_id):
         'submitted': False,
         'answers': {},
         'terminated_at': None,
-        'submitted_at': None
+        'submitted_at': None,
+        'termination_type': None,
+        'termination_reason': None,
+        'auto_terminated': False
     })
+
+
+def add_violation_log(student_id, violation_type, auto_terminated=True):
+    entry = {
+        'student_id': student_id,
+        'violation_type': violation_type,
+        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'auto_terminated': auto_terminated
+    }
+    violation_logs.insert(0, entry)
+    if len(violation_logs) > MAX_LOG_ENTRIES:
+        del violation_logs[MAX_LOG_ENTRIES:]
 
 
 def auto_submit_exam(student_id, answers=None, terminated=False):
@@ -76,20 +92,26 @@ def auto_submit_exam(student_id, answers=None, terminated=False):
     return status
 
 
-def terminate_student_exam(student_id):
+def terminate_student_exam(student_id, termination_reason='Exam terminated by administrator', log_message=None, violation_type=None, auto_terminated=False):
     username = candidate_names.get(student_id, 'Candidate')
     already_terminated = get_exam_status(student_id).get('terminated', False)
     status = auto_submit_exam(student_id, terminated=True)
 
+    status['termination_reason'] = termination_reason
+    if violation_type:
+        status['termination_type'] = violation_type
+    if auto_terminated:
+        status['auto_terminated'] = True
+
     if not already_terminated:
-        add_activity_log(student_id, username, 'Exam terminated by administrator', entry_type='terminated')
+        add_activity_log(student_id, username, log_message or termination_reason, entry_type='terminated')
 
     for sid, session_info in list(active_sessions_by_sid.items()):
         if session_info.get('student') == student_id:
             active_warnings_by_sid.pop(sid, None)
             warning_detection_state_by_sid.pop(sid, None)
             socketio.emit('exam_terminated', {
-                'message': 'Your exam has been terminated by the administrator due to suspicious activity.'
+                'message': termination_reason
             }, to=sid)
 
     return status
@@ -100,7 +122,7 @@ def create_face_detector():
         mp_face_mesh = mp.solutions.face_mesh
         return "solutions", mp_face_mesh.FaceMesh(
             static_image_mode=False,
-            max_num_faces=1,
+            max_num_faces=2,
             refine_landmarks=False,
             min_detection_confidence=0.5,
             min_tracking_confidence=0.5
@@ -113,7 +135,7 @@ def create_face_detector():
     options = vision.FaceLandmarkerOptions(
         base_options=BaseOptions(model_asset_path=model_path),
         running_mode=vision.RunningMode.IMAGE,
-        num_faces=1,
+        num_faces=2,
         min_face_detection_confidence=0.5,
         min_face_presence_confidence=0.5,
         min_tracking_confidence=0.5
@@ -128,14 +150,14 @@ def detect_face_landmarks(rgb_frame):
     if face_detector_mode == "solutions":
         results = face_detector.process(rgb_frame)
         if not results.multi_face_landmarks:
-            return None
-        return results.multi_face_landmarks[0].landmark
+            return None, 0
+        return results.multi_face_landmarks[0].landmark, len(results.multi_face_landmarks)
 
     mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
     results = face_detector.detect(mp_image)
     if not results.face_landmarks:
-        return None
-    return results.face_landmarks[0]
+        return None, 0
+    return results.face_landmarks[0], len(results.face_landmarks)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -307,6 +329,38 @@ def terminate_exam(student_id):
         'status': status
     })
 
+@app.route('/exam/tab_violation', methods=['POST'])
+def exam_tab_violation():
+    student_id = session.get('candidate_id')
+    if not student_id:
+        return jsonify({'success': False, 'message': 'Candidate login required'}), 403
+
+    if get_exam_status(student_id).get('terminated'):
+        return jsonify({'success': False, 'message': 'Exam already terminated'}), 400
+
+    data = request.get_json(silent=True) or {}
+    violation_type = data.get('violation_type', 'TAB_SWITCH_TERMINATION')
+    reason_text = 'Your exam has been automatically terminated due to tab switching violation.'
+    status = terminate_student_exam(
+        student_id,
+        termination_reason=reason_text,
+        log_message='Student Auto-Terminated — Tab Switching Detected',
+        violation_type=violation_type,
+        auto_terminated=True
+    )
+
+    add_violation_log(student_id, violation_type, auto_terminated=True)
+    username = session.get('candidate_name', candidate_names.get(student_id, 'Candidate'))
+    socketio.emit('student_auto_terminated', {
+        'student_id': student_id,
+        'student_name': username,
+        'reason': 'Tab Switching Detected',
+        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'exam_status': 'terminated'
+    }, broadcast=True)
+
+    return jsonify({'success': True, 'message': reason_text, 'status': status})
+
 @app.route("/exam")
 def exam():
     student_id = session.get('candidate_id')
@@ -340,7 +394,7 @@ def exam_completed():
     status = get_exam_status(student_id) if student_id else {}
     message = None
     if status.get('terminated'):
-        message = 'Your exam has been terminated by the administrator due to suspicious activity.'
+        message = status.get('termination_reason') or 'Your exam has been terminated by the administrator due to suspicious activity.'
     return render_template("exam_completed.html", message=message, status=status)
 
 @app.route("/dashboard")
@@ -378,7 +432,7 @@ def handle_frame(data):
             return
 
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        landmarks = detect_face_landmarks(rgb_frame)
+        landmarks, face_count = detect_face_landmarks(rgb_frame)
 
         if not landmarks:
             get_confirmed_warnings([])
@@ -386,6 +440,8 @@ def handle_frame(data):
             return
 
         active_warnings = []
+        if face_count > 1:
+            active_warnings.append('Multiple Faces Detected')
 
         # --- GAZE LOGIC ---
         nose = landmarks[1]

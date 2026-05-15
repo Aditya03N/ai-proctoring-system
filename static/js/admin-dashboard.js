@@ -36,10 +36,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    const socket = io();
+
     const renderSummary = (data) => {
         activeStudents.textContent = String(data.active_students || 0).padStart(2, '0');
         totalWarnings.textContent = String(data.total_warnings || 0).padStart(2, '0');
     };
+
+    socket.on('student_auto_terminated', (data) => {
+        fetchLogs();
+    });
 
     const fetchLogs = async () => {
         try {
