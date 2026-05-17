@@ -254,6 +254,12 @@ tr:hover td { background: rgba(255, 255, 255, 0.02); }
 .log-table .roll { font-family: var(--font-mono); color: var(--primary); }
 .log-table .activity { color: #cbd5e1; }
 .log-table .time { color: var(--text-muted); font-family: var(--font-mono); }
+.warning-monitor-table .student-id { display: block; margin-top: 4px; color: var(--primary); font-family: var(--font-mono); font-size: 0.78rem; }
+.status-pill { display: inline-flex; align-items: center; justify-content: center; min-width: 92px; padding: 7px 10px; border-radius: 999px; font-size: 0.74rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; }
+.status-active { color: var(--primary); border: 1px solid var(--primary-glow); background: rgba(0, 242, 255, 0.1); }
+.status-warning { color: var(--warning); border: 1px solid var(--warning-glow); background: rgba(245, 158, 11, 0.1); }
+.status-suspicious { color: var(--danger); border: 1px solid var(--danger-glow); background: rgba(239, 68, 68, 0.1); }
+.status-terminated { color: var(--danger); border: 1px solid var(--danger-glow); background: rgba(239, 68, 68, 0.16); }
 .terminate-btn { padding: 9px 13px; font-size: 0.72rem; white-space: nowrap; }
 .terminate-btn:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }
 .terminated-badge { color: var(--danger); border: 1px solid var(--danger-glow); background: rgba(239, 68, 68, 0.12); white-space: nowrap; }

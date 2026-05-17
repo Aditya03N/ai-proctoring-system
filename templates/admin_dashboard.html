@@ -44,6 +44,36 @@
         <section class="glass-panel live-panel" style="padding:28px;">
             <div class="panel-header">
                 <div>
+                    <h3 class="orbitron">Live Warning Monitoring Table</h3>
+                    <p class="text-muted" style="margin-top:6px; font-size:0.95rem;">Student warning rows update instantly through the active Socket.IO connection.</p>
+                </div>
+                <div class="status-dot"></div>
+            </div>
+
+            <div class="log-table-container">
+                <table class="log-table warning-monitor-table">
+                    <thead>
+                        <tr>
+                            <th>Student Name / ID</th>
+                            <th>Warning Type</th>
+                            <th>Timestamp</th>
+                            <th>Total Warning Count</th>
+                            <th>Current Status</th>
+                            <th>Action Button</th>
+                        </tr>
+                    </thead>
+                    <tbody id="warningMonitorBody">
+                        <tr>
+                            <td colspan="6" style="padding:40px; text-align:center; color: var(--text-muted);">Waiting for student warnings...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="glass-panel live-panel" style="padding:28px;">
+            <div class="panel-header">
+                <div>
                     <h3 class="orbitron">Live Activity Logs</h3>
                     <p class="text-muted" style="margin-top:6px; font-size:0.95rem;">Automatically refreshes every 1.5 seconds. New events appear at the top.</p>
                 </div>

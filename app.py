@@ -33,6 +33,7 @@ activity_logs = []
 violation_logs = []
 active_sessions_by_sid = {}
 exam_status_by_student = {}
+warning_monitor_by_student = {}
 
 MAX_LOG_ENTRIES = 80
 
@@ -55,6 +56,94 @@ def add_activity_log(student_id, username, warning, entry_type='warning'):
         del activity_logs[MAX_LOG_ENTRIES:]
 
 
+def get_warning_status(student_id, has_active_warning=False):
+    status = get_exam_status(student_id)
+    if status.get('terminated'):
+        return 'Terminated'
+
+    warning_row = warning_monitor_by_student.get(student_id, {})
+    warning_count = warning_row.get('warning_count', 0)
+    if warning_count >= 3:
+        return 'Suspicious'
+    if has_active_warning:
+        return 'Warning'
+    return 'Active'
+
+
+def get_warning_monitor_rows():
+    rows = []
+    active_student_ids = {
+        session_info.get('student')
+        for session_info in active_sessions_by_sid.values()
+    }
+
+    for student_id, row in warning_monitor_by_student.items():
+        rows.append({
+            'student_id': student_id,
+            'student_name': row.get('student_name', candidate_names.get(student_id, 'Candidate')),
+            'warning_type': row.get('warning_type', '--'),
+            'timestamp': row.get('timestamp', '--'),
+            'sort_time': row.get('sort_time', ''),
+            'warning_count': row.get('warning_count', 0),
+            'status': get_warning_status(
+                student_id,
+                student_id in active_student_ids and bool(row.get('has_active_warning'))
+            ),
+            'is_active': student_id in active_student_ids,
+            'terminated': get_exam_status(student_id).get('terminated', False)
+        })
+
+    return sorted(rows, key=lambda item: item.get('sort_time', item['timestamp']), reverse=True)
+
+
+def emit_admin_monitor_update():
+    active_student_ids = {
+        session_info['student']
+        for session_info in active_sessions_by_sid.values()
+    }
+    warnings_only = [entry for entry in activity_logs if entry.get('type') == 'warning']
+    socketio.emit('admin_warning_monitor_update', {
+        'warning_rows': get_warning_monitor_rows(),
+        'logs': activity_logs,
+        'active_students': len(active_student_ids),
+        'total_warnings': len(warnings_only),
+        'active_student_ids': list(active_student_ids),
+        'exam_statuses': exam_status_by_student
+    })
+
+
+def record_warning_for_admin(student_id, username, warning):
+    now = datetime.now()
+    row = warning_monitor_by_student.setdefault(student_id, {
+        'student_id': student_id,
+        'student_name': username,
+        'warning_type': warning,
+        'timestamp': now.strftime('%Y-%m-%d %H:%M:%S'),
+        'sort_time': now.isoformat(),
+        'warning_count': 0,
+        'has_active_warning': True
+    })
+    row['student_name'] = username
+    row['warning_type'] = warning
+    row['timestamp'] = now.strftime('%Y-%m-%d %H:%M:%S')
+    row['sort_time'] = now.isoformat()
+    row['warning_count'] = row.get('warning_count', 0) + 1
+    row['has_active_warning'] = True
+    emit_admin_monitor_update()
+
+
+def update_warning_monitor_activity(student_id, has_active_warning):
+    row = warning_monitor_by_student.get(student_id)
+    if not row:
+        return
+
+    if row.get('has_active_warning') == has_active_warning:
+        return
+
+    row['has_active_warning'] = has_active_warning
+    emit_admin_monitor_update()
+
+
 def get_exam_status(student_id):
     return exam_status_by_student.setdefault(student_id, {
         'terminated': False,
@@ -66,6 +155,19 @@ def get_exam_status(student_id):
         'termination_reason': None,
         'auto_terminated': False
     })
+
+
+def reset_student_attempt(student_id):
+    exam_status_by_student.pop(student_id, None)
+    warning_monitor_by_student.pop(student_id, None)
+
+    for sid, session_info in list(active_sessions_by_sid.items()):
+        if session_info.get('student') == student_id:
+            active_sessions_by_sid.pop(sid, None)
+            active_warnings_by_sid.pop(sid, None)
+            warning_detection_state_by_sid.pop(sid, None)
+
+    emit_admin_monitor_update()
 
 
 def add_violation_log(student_id, violation_type, auto_terminated=True):
@@ -105,6 +207,8 @@ def terminate_student_exam(student_id, termination_reason='Exam terminated by ad
 
     if not already_terminated:
         add_activity_log(student_id, username, log_message or termination_reason, entry_type='terminated')
+        if student_id in warning_monitor_by_student:
+            warning_monitor_by_student[student_id]['has_active_warning'] = False
 
     for sid, session_info in list(active_sessions_by_sid.items()):
         if session_info.get('student') == student_id:
@@ -114,6 +218,7 @@ def terminate_student_exam(student_id, termination_reason='Exam terminated by ad
                 'message': termination_reason
             }, to=sid)
 
+    emit_admin_monitor_update()
     return status
 
 def create_face_detector():
@@ -194,7 +299,8 @@ def emit_warning_state(active_warnings):
     student_id = session.get('candidate_id', 'AIML000')
     username = session.get('candidate_name', candidate_names.get(student_id, 'Candidate'))
 
-    if request.sid not in active_sessions_by_sid:
+    session_started = request.sid not in active_sessions_by_sid
+    if session_started:
         add_activity_log(student_id, username, 'Exam session started', entry_type='info')
 
     active_sessions_by_sid[request.sid] = {
@@ -203,9 +309,15 @@ def emit_warning_state(active_warnings):
         'connected_at': datetime.now().strftime('%H:%M:%S')
     }
 
+    if session_started:
+        emit_admin_monitor_update()
+
     for warning in current_warnings - previous_warnings:
         store_warning(warning)
         add_activity_log(student_id, username, warning, entry_type='warning')
+        record_warning_for_admin(student_id, username, warning)
+
+    update_warning_monitor_activity(student_id, bool(current_warnings))
 
     active_warnings_by_sid[request.sid] = current_warnings
     emit('proctor_update', {
@@ -249,6 +361,7 @@ def get_logs():
     active_student_ids = {session_info['student'] for session_info in active_sessions_by_sid.values()}
     return jsonify({
         'logs': activity_logs,
+        'warning_rows': get_warning_monitor_rows(),
         'active_students': active_students,
         'total_warnings': len(warnings_only),
         'active_student_ids': list(active_student_ids),
@@ -278,8 +391,10 @@ def login():
         password = request.form.get('password')
         
         if candidate_id in users and users[candidate_id] == password:
+            reset_student_attempt(candidate_id)
             session['candidate_id'] = candidate_id
             session['candidate_name'] = candidate_names.get(candidate_id, "Candidate")
+            session.pop('exam_warnings', None)
             return redirect(url_for('dashboard'))
         else:
             return render_template("login.html", error="Invalid Candidate ID or Password")
@@ -357,7 +472,7 @@ def exam_tab_violation():
         'reason': 'Tab Switching Detected',
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'exam_status': 'terminated'
-    }, broadcast=True)
+    })
 
     return jsonify({'success': True, 'message': reason_text, 'status': status})
 
@@ -484,6 +599,7 @@ def handle_disconnect():
     active_warnings_by_sid.pop(request.sid, None)
     warning_detection_state_by_sid.pop(request.sid, None)
     active_sessions_by_sid.pop(request.sid, None)
+    emit_admin_monitor_update()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
